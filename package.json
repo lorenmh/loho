@@ -1,0 +1,14 @@
+{
+  "name": "loho",
+  "version": "0.0.1",
+  "description": "node backend for loho",
+  "main": "app.js",
+  "author": "lorenmh",
+  "devDependencies": {
+    "express": "~4.11.1",
+    "gulp": "~3.8.10",
+    "sequelize": "~2.0.0-rc8",
+    "pg-hstore": "~2.3.1",
+    "pg": "~4.2.0"
+  }
+}
