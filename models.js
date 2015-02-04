@@ -2,7 +2,6 @@ var Sequelize = require('sequelize');
 var sequelize = new Sequelize('loho', 'loho_owner', 'loho_password', {
   dialect: 'postgres'
 });
-var chainer = new Sequelize.Utils.QueryChainer();
 
 var Author = sequelize.define('author', {
   name: {
@@ -36,13 +35,8 @@ var article = Article.build({
   text: 'This is the text body of the test'
 });
 
-sequelize
-  .sync({ force: true })
-  .then(function() {
-    chainer.add(loren).add(article);
-
-    chainer.run().then(function() {
-      article.setAuthor(loren);
-    });
-  })
-;
+loren.save().success(function() {
+  article.save().success(function() {
+    article.setAuthor(loren);
+  });
+});
