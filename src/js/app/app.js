@@ -1,2 +1,3 @@
 var angular = require('lib/angular.js');
-console.log(angular);
+var y = () => 'Hello World!';
+console.log(y());
