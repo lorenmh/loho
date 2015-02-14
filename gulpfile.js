@@ -1,3 +1,6 @@
+/* jshint node: true */
+'use strict';
+
 var gulp        = require('gulp');
 var browserify  = require('browserify');
 var sourcemaps  = require('gulp-sourcemaps');
@@ -8,7 +11,7 @@ var to5ify      = require('6to5ify');
 
 gulp.task('browserify', function() {
   var bundleStream = 
-      browserify({ debug: true, paths:['./src/js']})
+      browserify({ debug: true, paths:['./src/js', './']})
         .transform(to5ify.configure({
           sourceMapRelative: __dirname,
           ignore: /(^|\/)lib\//
