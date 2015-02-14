@@ -5,7 +5,7 @@ var Sequelize   = require('sequelize');
 var vars        = require('./vars');
 var acl         = require('./acl');
 
-var sequelize = new Sequelize(vars.db_name, vars.db_owner, vars.db_password, {
+var sequelize = new Sequelize(vars.db_name, vars.db_owner, vars.db_pass, {
   dialect: 'postgres'
 });
 
@@ -17,12 +17,9 @@ var Author = sequelize.define('author', {
 }, {
   hooks: {
     afterCreate: function(author, options, fn) {
-      acl.connect(function(err, $acl) {
-        if (err) {
-          console.log('Error connecting to acl');
-        } else {
-          $acl.addUserRoles(author.id, 'author');
-        }
+      console.log('CREATED');
+      acl.connect().then(function($acl) {
+        $acl.addUserRoles(author.id, 'author');
       });
     }
   },
@@ -47,13 +44,19 @@ var Article = sequelize.define('article', {
 Author.hasMany(Article, {as: 'Articles'});
 Article.belongsTo(Author, {as: 'Author'});
 
-acl.connect(function(err, $acl) {
-  if (err) {
-    console.log('Error connecting to acl');
-  } else {
-    $acl.allow('author', 'article', ['edit', 'create']);
-  }
-});
-
 module.exports.Author = Author;
 module.exports.Article = Article;
+
+module.exports.sync = function() {
+  return sequelize.sync().then(function() {
+    console.log('SYNCED');
+    return new Promise(function(res, rej) {
+      acl.connect().then(function($acl) {
+        console.log('ACL CONNECT');
+
+        $acl.allow('author', 'article', ['edit', 'create']).then( res );
+
+      });
+    });
+  });
+};

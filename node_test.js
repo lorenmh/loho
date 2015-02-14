@@ -8,10 +8,7 @@ var article = Article.build({
   text: 'This is the text body of the test'
 });
 
-loren.save().success(function() {
-  article.save().success(function() {
-    article.setAuthor(loren).success(function() {
-      
-    });
-  });
+Promise.all([models.sync, loren.save, article.save]).then( function() {
+  article.setAuthor(loren)
+    .then( function() { console.log(''); });
 });
