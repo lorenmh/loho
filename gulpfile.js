@@ -6,12 +6,13 @@ var browserify  = require('browserify');
 var sourcemaps  = require('gulp-sourcemaps');
 var uglify      = require('gulp-uglify');
 var transform   = require('vinyl-transform');
-var source      = require('vinyl-source-stream');
 var streamify   = require('gulp-streamify');
 var to5ify      = require('6to5ify');
+var to5         = require('gulp-6to5');
 var util        = require('gulp-util');
+var del         = require('del');
 
-gulp.task('browserify', function() {
+gulp.task('client', function() {
   var bundle;
 
   bundle = transform(function(filename) {
@@ -25,7 +26,7 @@ gulp.task('browserify', function() {
       .bundle()
     ;
   });
-  
+
   return gulp.src('./client/src/js/entry/*.js')
     .pipe( bundle )
     //.pipe(streamify(sourcemaps.init( {loadMaps: true} )))
@@ -33,4 +34,14 @@ gulp.task('browserify', function() {
     //.pipe(streamify(sourcemaps.write()))
     .pipe( gulp.dest('./dist/js/') )
   ;
+});
+
+gulp.task('clean:run', function(cb) {
+  del(['./run/**'], cb);
+});
+
+gulp.task('server', ['clean:run'], function() {
+  return gulp.src('./server/**')
+    .pipe( to5() )
+    .pipe(gulp.dest('./run/'));
 });
