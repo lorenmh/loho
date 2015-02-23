@@ -1,7 +1,9 @@
-/* jshint node: true, esnext: true */
+/* jshint node: true */
 'use strict';
 
 var Sequelize   = require('sequelize');
+var bcrypt      = require('bcrypt');
+
 var vars        = require('../../vars');
 var acl         = require('./acl');
 var syncPromise;
@@ -28,17 +30,20 @@ var Author = sequelize.define('author', {
     allowNull: false,
     validate: {
       notEmpty: true
+    },
+    set: function(v) {
+      var salt = bcrypt.genSaltSync(10);
+      var hash = bcrypt.hashSync(v, salt);
+      this.setDataValue('password', hash);
     }
   }
 }, {
   hooks: {
-    beforeCreate: (author, options, fn) => {
-      
-    },
-    
-    afterCreate: (author, options, fn) => {
-      acl.connect().then(function($acl) {
-        $acl.addUserRoles(author.id, 'author');
+    afterCreate: function(author, options) {
+      return new Promise( function(res, rej) {
+        acl.connect().then( function($acl) {
+          $acl.addUserRoles(author.id, 'author').then(res, rej);
+        });
       });
     }
   },
@@ -101,11 +106,11 @@ module.exports.Author = Author;
 module.exports.Article = Article;
 module.exports.Blog = Blog;
 
-syncPromise = new Promise( (res, rej) => {
+syncPromise = new Promise( function(res, rej) {
   console.log('SYNCING');
-  sequelize.sync().then( () => {
+  sequelize.sync().then( function() {
     console.log('SYNCED');
-    acl.connect().then( ($acl) => {
+    acl.connect().then( function($acl) {
       $acl.allow([{
         roles: ['author'],
         allows: [{  resources: ['article', 'blog'],

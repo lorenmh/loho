@@ -2,7 +2,7 @@ var models = require('./models');
 var Author = models.Author;
 var Article = models.Article;
 
-var loren = Author.build({ name: 'Loren' });
+var loren = Author.build({ name: 'Loren', password: 'foo' });
 var article = Article.build({
   title: 'Hello World',
   text: 'This is the text body of the test'
