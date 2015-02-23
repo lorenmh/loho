@@ -21,9 +21,21 @@ var Author = sequelize.define('author', {
     validate: {
       notEmpty: true
     }
+  },
+  password: {
+    type: Sequelize.STRING,
+    field: 'password',
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
   }
 }, {
   hooks: {
+    beforeCreate: (author, options, fn) => {
+      
+    },
+    
     afterCreate: (author, options, fn) => {
       acl.connect().then(function($acl) {
         $acl.addUserRoles(author.id, 'author');
