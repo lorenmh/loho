@@ -1,42 +1,49 @@
-/* jshint node: true, esnext: true */
+/* jshint node: true */
 'use strict';
 
 var models  = require('./models');
 var acl     = require('./acl');
 
-var access_errors = (message) => {
+var access_errors = function(message) {
   return { errors: [{ message: message, path: 'access control' }] };
 };
 
-module.exports.C_Article = (user, values) => {
-  return new Promise( (res, rej) => {
-    acl.connect().then( ($acl) => {
-      $acl.isAllowed( user.id, 'article', 'create' ).then( (access) => {
+module.exports.C_Article = function(user, values){
+  return new Promise( function(res, rej) {
+    acl.connect().then( function($acl) {
+      $acl.isAllowed( user.id, 'article', 'create' ).then( function(access) {
         if (access) {
           models.Article.build( values )
             .save()
             .then( res )
-            .error( rej )
+            .catch( rej )
           ;
         } else {
-          rej( access_errors('unauthorized access for user') );
+          rej( access_errors('Unauthorized Action') );
         }
       });
     });
   });
 };
 
-module.exports.U_Article = (user, article, values) => {
-  return new Promise( (res, rej) => {
-    acl.connect().then( ($acl) => {
-      $acl.isAllowed( user.id, 'article', 'update' ).then( (access) => {
+module.exports.R_Article = function(user, id) {
+  return new Promise( function(res, rej) {
+    acl.connect().then( function($acl) {
+      $acl.isAllowed( user.id, 'article', 'read' ).then( function(access) {
         if (access) {
-          article.updateAttributes( values )
-            .then( res )
-            .error( rej )
-          ;
+          if (id !== undefined) {
+            models.Article.find({ where: { id: id } })
+              .then( res )
+              .catch( rej )
+            ;
+          } else {
+            models.Article.findAll()
+              .then( res )
+              .catch( rej )
+            ;
+          }
         } else {
-          rej( access_errors('unauthorized access for user') );
+          rej( access_errors('Unauthorized Action') );
         }
       });
     });

@@ -4,12 +4,14 @@
 var Sequelize   = require('sequelize');
 var bcrypt      = require('bcrypt');
 
+var config      = require('../config');
 var vars        = require('../../vars');
 var acl         = require('./acl');
 var syncPromise;
 
 var sequelize = new Sequelize(vars.db_name, vars.db_owner, vars.db_pass, {
-  dialect: 'postgres'
+  dialect: 'postgres',
+  logging: false
 });
 
 // var User = sequelize.define('user');
@@ -47,8 +49,23 @@ var Author = sequelize.define('author', {
       });
     }
   },
+  instanceMethods: {
+    comparePassword: function (password) {
+      var self = this;
+      return new Promise(function (res, rej) {
+        bcrypt.compare(password, self.password, function (error, response) {
+          if (error) {
+            rej(error);
+          } else {
+            res(response);
+          }
+        });
+      });
+    }
+  },
   freezeTableName: true
 });
+
 
 var Article = sequelize.define('article', {
   title: {
@@ -122,7 +139,11 @@ syncPromise = new Promise( function(res, rej) {
         allows: [{  resources: ['article', 'blog'],
                     permissions: ['read']
         }]
-      }]).then( res );
+      }])
+        .then( $acl.addUserRoles( config.GUEST_ID, 'guest' ) )
+        .then( res )
+        .catch( rej )
+      ;
     });
   });
 });
