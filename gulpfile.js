@@ -49,3 +49,7 @@ gulp.task('server', ['clean:run'], function() {
 gulp.task('wc', function() {
   gulp.watch('./client/src/js/**/*.js', ['client']);
 });
+
+gulp.task('ws', function() {
+  gulp.watch('./server/**/*.js', ['server']);
+});

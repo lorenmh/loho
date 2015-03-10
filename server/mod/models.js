@@ -67,7 +67,7 @@ var Author = sequelize.define('author', {
 });
 
 
-var Article = sequelize.define('article', {
+var Project = sequelize.define('project', {
   title: {
     type: Sequelize.STRING,
     field: 'title',
@@ -94,7 +94,6 @@ var Blog = sequelize.define('blog', {
   title: {
     type: Sequelize.STRING,
     field: 'title',
-    unique: true,
     allowNull: false,
     validate: {
       notEmpty: true
@@ -108,19 +107,67 @@ var Blog = sequelize.define('blog', {
     validate: {
       notEmpty: true
     }
+  },
+
+  slug: {
+    type: Sequelize.STRING,
+    field: 'slug',
+    unique: true,
+    allowNull: false
   }
 }, {
-  freezeTableName: true
+  freezeTableName: true,
+  hooks: {
+    beforeValidate: function(blog, options, cb) {
+      if (blog.title !== undefined) {
+        var slug = blog.slug || toSlug( blog.title );
+        Blog.find({ where: { slug: slug } }).then( function(found) {
+          if (found === null) {
+            blog.slug = slug;
+            cb(null, blog);
+          } else {
+            var count = 1;
+            slug += '-';
+            (function recursiveFindUniqueSlug() {
+              Blog.find({ where: { slug: slug + count } })
+                  .then( function(found) {
+                if (found === null) {
+                  blog.slug = slug + count;
+                  cb(null, blog);
+                } else {
+                  count++;
+                  recursiveFindUniqueSlug();
+                }
+              });
+            })();
+          }
+        });
+      } else {
+        // if blog title isn't set, then let the validation fail
+        cb(null, blog);
+      }
+    }
+  }
 });
 
-Author.hasMany(Article, {as: 'Articles'});
+function toSlug(str) {
+  return str.replace(/[^\w\s\-]/g, ' ')
+    .split(' ')
+    .filter(function(ss) {
+      return (ss.length > 0);
+    })
+    .join('-')
+  ;
+}
+
+Author.hasMany(Project, {as: 'Projects'});
 Author.hasMany(Blog, {as: 'Blogs'});
 
-Article.belongsTo(Author, {as: 'Author'});
+Project.belongsTo(Author, {as: 'Author'});
 Blog.belongsTo(Author, {as: 'Author'});
 
 module.exports.Author = Author;
-module.exports.Article = Article;
+module.exports.Project = Project;
 module.exports.Blog = Blog;
 
 syncPromise = new Promise( function(res, rej) {
@@ -130,17 +177,18 @@ syncPromise = new Promise( function(res, rej) {
     acl.connect().then( function($acl) {
       $acl.allow([{
         roles: ['author'],
-        allows: [{  resources: ['article', 'blog'],
+        allows: [{  resources: ['project', 'blog'],
                     permissions: ['create', 'read', 'update', 'delete']
         }]
       },
       {
         roles: ['guest'],
-        allows: [{  resources: ['article', 'blog'],
+        allows: [{  resources: ['project', 'blog'],
                     permissions: ['read']
         }]
       }])
         .then( $acl.addUserRoles( config.GUEST_ID, 'guest' ) )
+        //.then( Author.build({ name: 'Loren', password: 'foo' }).save() )
         .then( res )
         .catch( rej )
       ;

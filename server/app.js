@@ -18,7 +18,7 @@ app.use( session(config.SESSION_OPTIONS) );
 
 app.use( bodyParser.json() );
 
-app.use('/opensesame', login('login') );
+app.use('/opensesame', login() );
 
 app.use('/closesesame', function(req, res, next) {
   req.session.user = undefined;
@@ -31,24 +31,18 @@ app.use( setRole() );
 
 app.use( logger() );
 
-// app.get("/", function (req, res) {
-//   crud.C_Article(res.locals.user).then(function (articles) {
-//     res.send(articles);
-//   })["catch"](function (e) {
-//     if (e.name === config.SEQUELIZE_VALIDATION_ERROR) {
-//       delete e.name;
-//       res.send(e);
-//     } else {
-//       console.log(e);
-//       res.send(e.message);
-//     }
-//   });
-// });
+app.get("/", function (req, res) {
+  crud.C_Blog(res.locals.user).then(function (blogs) {
+    res.send(blogs);
+  }).catch(function (e) {
+    res.send(e);
+  });
+});
 
 app.use('/dist', express.static('dist'));
 
-app.get('/*', function(req, res) {
-  res.sendfile('./templates/index.html');
-});
+// app.get('/*', function(req, res) {
+//   res.sendfile('./templates/index.html');
+// });
 
 app.listen(3000);
