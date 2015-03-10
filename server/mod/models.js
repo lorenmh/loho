@@ -16,6 +16,48 @@ var sequelize = new Sequelize(vars.db_name, vars.db_owner, vars.db_pass, {
 
 // var User = sequelize.define('user');
 
+function toSlug(str) {
+  return str.replace(/[^\w\s\-]/g, ' ')
+    .split(' ')
+    .filter(function(ss) {
+      return (ss.length > 0);
+    })
+    .join('-')
+  ;
+}
+
+function slugify(Model) {
+  return function(instance, options, cb) {
+    if (instance.title !== undefined) {
+      var slug = instance.slug || toSlug( instance.title );
+      Model.find({ where: { slug: slug } }).then( function(found) {
+        if (found === null) {
+          instance.slug = slug;
+          cb(null, instance);
+        } else {
+          var count = 1;
+          slug += '-';
+          (function recursiveFindUniqueSlug() {
+            Model.find({ where: { slug: slug + count } })
+                .then( function(found) {
+              if (found === null) {
+                instance.slug = slug + count;
+                cb(null, instance);
+              } else {
+                count++;
+                recursiveFindUniqueSlug();
+              }
+            });
+          })();
+        }
+      });
+    } else {
+      // if instance title isn't set then let the validation fail
+      cb(null, instance);
+    }
+  };
+}
+
 var Author = sequelize.define('author', {
   name: {
     type: Sequelize.STRING,
@@ -85,9 +127,16 @@ var Project = sequelize.define('project', {
     validate: {
       notEmpty: true
     }
+  },
+
+  slug: {
+    type: Sequelize.STRING,
+    field: 'slug',
+    unique: true,
+    allowNull: false
   }
 }, {
-  freezeTableName: true
+  freezeTableName: true,
 });
 
 var Blog = sequelize.define('blog', {
@@ -117,48 +166,10 @@ var Blog = sequelize.define('blog', {
   }
 }, {
   freezeTableName: true,
-  hooks: {
-    beforeValidate: function(blog, options, cb) {
-      if (blog.title !== undefined) {
-        var slug = blog.slug || toSlug( blog.title );
-        Blog.find({ where: { slug: slug } }).then( function(found) {
-          if (found === null) {
-            blog.slug = slug;
-            cb(null, blog);
-          } else {
-            var count = 1;
-            slug += '-';
-            (function recursiveFindUniqueSlug() {
-              Blog.find({ where: { slug: slug + count } })
-                  .then( function(found) {
-                if (found === null) {
-                  blog.slug = slug + count;
-                  cb(null, blog);
-                } else {
-                  count++;
-                  recursiveFindUniqueSlug();
-                }
-              });
-            })();
-          }
-        });
-      } else {
-        // if blog title isn't set, then let the validation fail
-        cb(null, blog);
-      }
-    }
-  }
 });
 
-function toSlug(str) {
-  return str.replace(/[^\w\s\-]/g, ' ')
-    .split(' ')
-    .filter(function(ss) {
-      return (ss.length > 0);
-    })
-    .join('-')
-  ;
-}
+Project.hook('beforeValidate', slugify(Project));
+Blog.hook('beforeValidate', slugify(Blog));
 
 Author.hasMany(Project, {as: 'Projects'});
 Author.hasMany(Blog, {as: 'Blogs'});
