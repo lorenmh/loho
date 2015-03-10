@@ -8,7 +8,6 @@ var vars    = require('../../vars');
 module.exports.connect = function(){
   return new Promise(function(res, rej) {
     mongo.connect(vars.acl_mongo_url, function(e, db) {
-      console.log("CONNECT ACL");
       if (e) {
         rej(e);
       } else {

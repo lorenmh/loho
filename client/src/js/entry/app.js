@@ -1,1 +1,1 @@
-() => console.log('hey');
+require('app/app.js');

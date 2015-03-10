@@ -3,10 +3,7 @@
 
 var models  = require('./models');
 var acl     = require('./acl');
-
-var access_errors = function(message) {
-  return { errors: [{ message: message, path: 'access control' }] };
-};
+var msg     = require('./messages');
 
 module.exports.C_Article = function(user, values){
   return new Promise( function(res, rej) {
@@ -16,10 +13,10 @@ module.exports.C_Article = function(user, values){
           models.Article.build( values )
             .save()
             .then( res )
-            .catch( rej )
+            .catch( function(e){ rej( msg.cleanedError(e) ); })
           ;
         } else {
-          rej( access_errors('Unauthorized Action') );
+          rej( msg.error('Unauthorized Access') );
         }
       });
     });
@@ -34,16 +31,16 @@ module.exports.R_Article = function(user, id) {
           if (id !== undefined) {
             models.Article.find({ where: { id: id } })
               .then( res )
-              .catch( rej )
+              .catch( function(e){ rej( msg.cleanedError(e) ); })
             ;
           } else {
             models.Article.findAll()
               .then( res )
-              .catch( rej )
+              .catch( function(e){ rej( msg.cleanedError(e) ); })
             ;
           }
         } else {
-          rej( access_errors('Unauthorized Action') );
+          rej( msg.error('Unauthorized Access') );
         }
       });
     });

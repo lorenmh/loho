@@ -45,3 +45,7 @@ gulp.task('server', ['clean:run'], function() {
     .pipe( to5() )
     .pipe(gulp.dest('./run/'));
 });
+
+gulp.task('wc', function() {
+  gulp.watch('./client/src/js/**/*.js', ['client']);
+});

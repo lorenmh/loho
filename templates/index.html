@@ -1,1 +1,50 @@
-<script src="dist/js/app.js"></script>
+<html>
+<head>
+  <base href="http://127.0.0.1:3000/" >
+  <link type="text/css" rel="stylesheet" href="dist/css/styles.css" />
+</head>
+<body ng-app="app">
+
+<ui-view></ui-view>
+
+<script type="text/ng-template" id="view.root.html">
+  <h1>root</h1>
+  <dir-heading></dir-heading>
+  <dir-nav></dir-nav>
+  <dir-contact></dir-contact>
+  <ui-view></ui-view>
+</script>
+
+<script type="text/ng-template" id="view.home.html">
+  <h1>home</h1>
+</script>
+
+<script type="text/ng-template" id="view.blog.html">
+  <h1>blog</h1>
+</script>
+
+<script type="text/ng-template" id="view.404.html">
+  <h1>404</h1>
+</script>
+
+<script type="text/ng-template" id="dir.nav.html">
+  <nav>
+    <ul>
+      <li><a ui-sref="root.blog">home</a></li>
+      <li><a ui-sref="root.blog">/blog</a></li>
+      <li><a ui-sref="root.projects">/projects</a></li>
+      <li><a ui-sref="root.about">/about</a></li>
+    </ul>
+  </nav>
+</script>
+
+<script type="text/ng-template" id="contact.html">
+  contact
+</script>
+
+
+
+<script src="/dist/js/app.js"></script>
+
+</body>
+</html>
