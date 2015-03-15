@@ -53,3 +53,5 @@ gulp.task('wc', function() {
 gulp.task('ws', function() {
   gulp.watch('./server/**/*.js', ['server']);
 });
+
+gulp.task('wa', ['wc', 'ws']);

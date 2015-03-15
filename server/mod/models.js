@@ -14,11 +14,16 @@ var sequelize = new Sequelize(vars.db_name, vars.db_owner, vars.db_pass, {
   logging: false
 });
 
-// var User = sequelize.define('user');
+function inArr(arr, str) {
+  return arr.indexOf(str) > 0;
+}
 
 function toSlug(str) {
   return str.replace(/[^\w\s\-]/g, ' ')
     .split(' ')
+    .map(function(ss) {
+      return ss.toLowerCase();
+    })
     .filter(function(ss) {
       return (ss.length > 0);
     })
@@ -28,27 +33,34 @@ function toSlug(str) {
 
 function slugify(Model) {
   return function(instance, options, cb) {
+    global.y = instance;
+    global.z = options;
     if (instance.title !== undefined) {
-      var slug = instance.slug || toSlug( instance.title );
+      var slug =  inArr(options.fields, 'slug') ? 
+        instance.slug || toSlug( instance.title ) : toSlug( instance.title );
       Model.find({ where: { slug: slug } }).then( function(found) {
         if (found === null) {
           instance.slug = slug;
           cb(null, instance);
         } else {
-          var count = 1;
-          slug += '-';
-          (function recursiveFindUniqueSlug() {
-            Model.find({ where: { slug: slug + count } })
-                .then( function(found) {
-              if (found === null) {
-                instance.slug = slug + count;
-                cb(null, instance);
-              } else {
-                count++;
-                recursiveFindUniqueSlug();
-              }
-            });
-          })();
+          if (instance.id === found.id) {
+            cb(null, instance);
+          } else {
+            var count = 1;
+            slug += '-';
+            (function recursiveFindUniqueSlug() {
+              Model.find({ where: { slug: slug + count } })
+                  .then( function(found) {
+                if (found === null) {
+                  instance.slug = slug + count;
+                  cb(null, instance);
+                } else {
+                  count++;
+                  recursiveFindUniqueSlug();
+                }
+              });
+            })();
+          }
         }
       });
     } else {
@@ -103,6 +115,9 @@ var Author = sequelize.define('author', {
           }
         });
       });
+    },
+    toJSON: function() {
+      return '{ "foo": "bar" }';
     }
   },
   freezeTableName: true
@@ -171,11 +186,11 @@ var Blog = sequelize.define('blog', {
 Project.hook('beforeValidate', slugify(Project));
 Blog.hook('beforeValidate', slugify(Blog));
 
-Author.hasMany(Project, {as: 'Projects'});
-Author.hasMany(Blog, {as: 'Blogs'});
+Author.hasMany(Project, {as: 'projects', foreignKey: 'authorId'});
+Author.hasMany(Blog, {as: 'blogs', foreignKey: 'authorId'});
 
-Project.belongsTo(Author, {as: 'Author'});
-Blog.belongsTo(Author, {as: 'Author'});
+Project.belongsTo(Author, {as: 'author', foreignKey: 'authorId'});
+Blog.belongsTo(Author, {as: 'author', foreignKey: 'authorId'});
 
 module.exports.Author = Author;
 module.exports.Project = Project;
