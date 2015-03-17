@@ -43,12 +43,8 @@ app.use('/dist', express.static('dist'));
 
 app.use('/api/:resource/:id?', function(req, res) {
   var id, resource, data;
-  id = typeof req.params.id !== 'undefined' ? + req.params.id : null;
+  id = typeof req.params.id !== 'undefined' ? req.params.id : null;
   resource = req.params.resource;
-  console.log('id', id);
-  console.log('res',resource);
-  console.log('body', req.body);
-  console.log('user', res.locals.user);
   if (api.hasOwnProperty(resource)) {
     if (req.method === 'GET') {
       api[resource].read( res.locals.user, id ).then(function(data) {

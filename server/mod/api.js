@@ -14,7 +14,30 @@ function sanitize(data, keys) {
   });
   return sanitizedData;
 }
-    
+
+var authorInclude = [
+  { model: models.Author, as: 'author', attributes: ['name'] }
+];
+
+var modelAttributes = [
+  'id',
+  'title',
+  'text',
+  'slug',
+  'createdAt',
+  'updatedAt'
+];
+
+function filteredInstanceWithAuthor(instance) {
+  var cleaned = {};
+
+  modelAttributes.forEach(function(key) {
+    cleaned[key] = instance[key];
+  });
+
+  return cleaned;
+}
+
 function createModel(Model, allowedKeys) {
   return function(user, values){
 
@@ -28,9 +51,10 @@ function createModel(Model, allowedKeys) {
                 values = sanitize(values, allowedKeys);
                 values.authorId = user.id;
 
-                Model.build( values )
-                  .save()
-                  .then( res )
+                Model.create( values )
+                  .then(function(instance) {
+                    res(filteredInstanceWithAuthor(instance));
+                  })
                   .catch( function(e){ rej( msg.cleanedError(e) ); })
                 ;
               } else {
@@ -52,14 +76,18 @@ function readModel(Model) {
           $acl.isAllowed( user.id,  Model.name.toLowerCase(), 'read' )
             .then( function(access) {
               if (access) {
-                var parsedId = parseInt(modelId);
-                if (!isNaN(parsedId)) {
-                  Model.find({ where: { id: parsedId } })
+                if (modelId) {
+                  Model.find({
+                        where: { slug: modelId }, 
+                        include: authorInclude,
+                        attributes: modelAttributes 
+                      })
                     .then( res )
                     .catch( function(e){ rej( msg.cleanedError(e) ); })
                   ;
                 } else {
-                  Model.findAll()
+                  Model.findAll({ include: authorInclude,
+                                  attributes: modelAttributes })
                     .then( res )
                     .catch( function(e){ rej( msg.cleanedError(e) ); })
                   ;
@@ -83,26 +111,35 @@ function updateModel(Model, allowedKeys) {
           $acl.isAllowed( user.id, Model.name.toLowerCase(), 'update' )
             .then( function(access) {
               if (access) {
-                var parsedId = parseInt(modelId);
-                if (!isNaN(parsedId)) {
-                  Model.find({ where: { id: parsedId } })
+                if (modelId) {
+                  console.log(1)
+                  Model.find({ 
+                        where: { slug: modelId },
+                        include: authorInclude,
+                        attributes: modelAttributes 
+                      })
                     .then( function(instance) {
+                      console.log(2)
                       if (instance) {
+                        console.log(3)
                         values = sanitize(values, allowedKeys);
                         instance.updateAttributes(values)
                           .then( res )
                           .catch( function(e){ rej( msg.cleanedError(e) ); })
                         ;
                       } else {
+                        console.log(4)
                         res( null );
                       }
                     })
                     .catch( function(e){ rej( msg.cleanedError(e) ); })
                   ;
                 } else {
+                  console.log(5)
                   res( null );
                 }
               } else {
+                console.log(6)
                 rej( msg.error('Unauthorized Access') );
               }
           });
@@ -120,9 +157,8 @@ function deleteModel(Model) {
           $acl.isAllowed( user.id,  Model.name.toLowerCase(), 'delete' )
             .then( function(access) {
               if (access) {
-                var parsedId = parseInt(modelId);
-                if (!isNaN(parsedId)) {
-                  Model.find({ where: { id: parsedId } })
+                if (modelId) {
+                  Model.find({ where: { slug: modelId } })
                     .then(function(instance) {
                       if (instance) {
                         instance.destroy()

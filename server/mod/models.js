@@ -15,7 +15,7 @@ var sequelize = new Sequelize(vars.db_name, vars.db_owner, vars.db_pass, {
 });
 
 function inArr(arr, str) {
-  return arr.indexOf(str) > 0;
+  return arr.indexOf(str) >= 0;
 }
 
 function toSlug(str) {
@@ -31,11 +31,9 @@ function toSlug(str) {
   ;
 }
 
-function slugify(Model) {
+function slugifyValidate(Model) {
   return function(instance, options, cb) {
-    global.y = instance;
-    global.z = options;
-    if (instance.title !== undefined) {
+    if (instance.title !== undefined && instance.isNewRecord) {
       var slug =  inArr(options.fields, 'slug') ? 
         instance.slug || toSlug( instance.title ) : toSlug( instance.title );
       Model.find({ where: { slug: slug } }).then( function(found) {
@@ -65,6 +63,51 @@ function slugify(Model) {
       });
     } else {
       // if instance title isn't set then let the validation fail
+      cb(null, instance);
+    }
+  };
+}
+
+function slugifyUpdate(Model) {
+  return function(instance, options, cb) {
+    var titleInFields, slugInFields, slug;
+
+    titleInFields = inArr(options.fields, 'title');
+    slugInFields = inArr(options.fields, 'slug');
+    
+    if ( titleInFields || slugInFields ) {
+      if ( titleInFields && !slugInFields ) {
+        slug = toSlug( instance.title );
+      } else {
+        slug = instance.slug || toSlug( instance.title );
+      }
+
+      Model.find({ where: { slug: slug } }).then( function(found) {
+        if (found === null) {
+          instance.slug = slug;
+          cb(null, instance);
+        } else {
+          if (instance.id === found.id) {
+            cb(null, instance);
+          } else {
+            var count = 1;
+            slug += '-';
+            (function recursiveFindUniqueSlug() {
+              Model.find({ where: { slug: slug + count } })
+                  .then( function(found) {
+                if (found === null) {
+                  instance.slug = slug + count;
+                  cb(null, instance);
+                } else {
+                  count++;
+                  recursiveFindUniqueSlug();
+                }
+              });
+            })();
+          }
+        }
+      });
+    } else {
       cb(null, instance);
     }
   };
@@ -183,8 +226,10 @@ var Blog = sequelize.define('blog', {
   freezeTableName: true,
 });
 
-Project.hook('beforeValidate', slugify(Project));
-Blog.hook('beforeValidate', slugify(Blog));
+Project.hook('beforeValidate', slugifyValidate(Project));
+Project.hook('beforeUpdate', slugifyUpdate(Project));
+Blog.hook('beforeValidate', slugifyValidate(Blog));
+Blog.hook('beforeUpdate', slugifyUpdate(Blog));
 
 Author.hasMany(Project, {as: 'projects', foreignKey: 'authorId'});
 Author.hasMany(Blog, {as: 'blogs', foreignKey: 'authorId'});
