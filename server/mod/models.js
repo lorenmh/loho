@@ -14,6 +14,8 @@ var sequelize = new Sequelize(vars.db_name, vars.db_owner, vars.db_pass, {
   logging: false
 });
 
+var TEASER_LENGTH = 200;
+
 function inArr(arr, str) {
   return arr.indexOf(str) >= 0;
 }
@@ -30,6 +32,37 @@ function toSlug(str) {
     .join('-')
   ;
 }
+
+function teaserFromText() {
+  return function(instance, options, cb) {
+    if (instance.text !== undefined) {
+      if (instance.teaser) {
+        cb(null, instance);
+      } else {
+        var teaser = instance.text;
+        if (teaser.length > TEASER_LENGTH) {
+          teaser = teaser.substr(
+            0, teaser.substr(0, TEASER_LENGTH).lastIndexOf(' ')
+          );
+        }
+        instance.teaser = teaser;
+        cb(null, instance);
+      }
+    } else {
+      // if instance text isn't set then let the validation fail
+      cb(null, instance);
+    }
+  };
+}
+
+// There's a bug with Sequelize, where if you're updating an instance, and you
+// attempt to mutate an attribute which wasn't being updated, then it won't 
+// record that you updated it. (ONLY FOR BEFOREVALIDATE)
+// For ex, someInstance.updateAttribute({ bar: 2 }). and in the hook:
+// function(inst, opt, fn) { inst.foo = 1; fn(null, inst) }
+// it will not set foo to 1.  It will only update bar to 2.
+// So I ended up putting the same code here twice, one for updates, one for
+// creates
 
 function slugifyValidate(Model) {
   return function(instance, options, cb) {
@@ -158,9 +191,6 @@ var Author = sequelize.define('author', {
           }
         });
       });
-    },
-    toJSON: function() {
-      return '{ "foo": "bar" }';
     }
   },
   freezeTableName: true
@@ -178,9 +208,24 @@ var Project = sequelize.define('project', {
     }
   },
 
+  img: {
+    type: Sequelize.STRING,
+    field: 'img',
+    unique: false,
+  },
+
   text: {
     type: Sequelize.TEXT,
     field: 'text',
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
+  },
+
+  teaser: {
+    type: Sequelize.TEXT,
+    field: 'teaser',
     allowNull: false,
     validate: {
       notEmpty: true
@@ -216,6 +261,15 @@ var Blog = sequelize.define('blog', {
     }
   },
 
+  teaser: {
+    type: Sequelize.TEXT,
+    field: 'teaser',
+    allowNull: false,
+    validate: {
+      notEmpty: true
+    }
+  },
+
   slug: {
     type: Sequelize.STRING,
     field: 'slug',
@@ -228,7 +282,10 @@ var Blog = sequelize.define('blog', {
 
 Project.hook('beforeValidate', slugifyValidate(Project));
 Project.hook('beforeUpdate', slugifyUpdate(Project));
+Project.hook('beforeValidate', teaserFromText());
+
 Blog.hook('beforeValidate', slugifyValidate(Blog));
+Blog.hook('beforeValidate', teaserFromText());
 Blog.hook('beforeUpdate', slugifyUpdate(Blog));
 
 Author.hasMany(Project, {as: 'projects', foreignKey: 'authorId'});
@@ -240,6 +297,51 @@ Blog.belongsTo(Author, {as: 'author', foreignKey: 'authorId'});
 module.exports.Author = Author;
 module.exports.Project = Project;
 module.exports.Blog = Blog;
+
+
+module.exports.scope = {
+  teaserAttributes: {
+    blog: [
+      'id',
+      'title',
+      'teaser',
+      'slug',
+      'createdAt',
+      'updatedAt'
+    ],
+
+    project: [
+      'id',
+      'title',
+      'img',
+      'teaser',
+      'slug',
+      'createdAt',
+      'updatedAt'
+    ]
+  },
+  
+  fullAttributes: {
+    blog: [
+      'id',
+      'title',
+      'text',
+      'slug',
+      'createdAt',
+      'updatedAt'
+    ],
+    project: [
+      'id',
+      'title',
+      'img',
+      'text',
+      'slug',
+      'createdAt',
+      'updatedAt'
+    ]
+  }
+};
+
 
 syncPromise = new Promise( function(res, rej) {
   console.log('SYNCING');

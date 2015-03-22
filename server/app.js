@@ -41,45 +41,75 @@ app.use( logger() );
 
 app.use('/dist', express.static('dist'));
 
-app.use('/api/:resource/:id?', function(req, res) {
+app.use('/api/:resource/:id?/', function(req, res) {
   var id, resource, data;
   id = typeof req.params.id !== 'undefined' ? req.params.id : null;
   resource = req.params.resource;
   if (api.hasOwnProperty(resource)) {
     if (req.method === 'GET') {
-      api[resource].read( res.locals.user, id ).then(function(data) {
-        if (data) {
-          res.send(data);
-        } else {
-          res.sendStatus(404);
-        }
-      });
-    } else if (req.method === 'POST') {
-     api[resource].create( res.locals.user, req.body ).then(function(data) {
-        if (data) {
-          res.send(data);
-        } else {
-          res.sendStatus(400);
-        }
-      });
-    } else if (req.method === 'PUT') {
-      api[resource].update( res.locals.user, id, req.body )
+      api[resource].read( res.locals.user, id )
         .then(function(data) {
           if (data) {
             res.send(data);
           } else {
-            res.sendStatus(400);
+            res.sendStatus(404);
           }
         })
+        .catch( function(e) {
+          res.status(400).send(e);
+        })
       ;
+    } else if (req.method === 'POST') {
+      if (id) {
+        res.sendStatus(400);
+      } else {
+        api[resource].create( res.locals.user, req.body )
+          .then(function(data) {
+            if (data) {
+              res.send(data);
+            } else {
+              res.sendStatus(400);
+            }
+          })
+          .catch( function(e) {
+            res.status(400).send(e);
+          })
+        ;
+      }
+    } else if (req.method === 'PUT') {
+      if (!id) {
+        res.sendStatus(400);
+      } else {
+        api[resource].update( res.locals.user, id, req.body )
+          .then(function(data) {
+            if (data) {
+              res.send(data);
+            } else {
+              res.sendStatus(400);
+            }
+          })
+          .catch( function(e) {
+            res.status(400).send(e);
+          })        
+        ;
+      }
     } else if (req.method === 'DELETE') {
-      api[resource].update( res.locals.user, id ).then(function(data) {
-        if (data) {
-          res.send(data);
-        } else {
-          res.sendStatus(404);
-        }
-      });
+      if (!id) {
+        res.sendStatus(400);
+      } else {
+        api[resource].update( res.locals.user, id )
+          .then(function(data) {
+            if (data) {
+              res.send(data);
+            } else {
+              res.sendStatus(404);
+            }
+          })
+          .catch( function(e) {
+            res.status(400).send(e);
+          })
+        ;
+      }
     }
   }
   

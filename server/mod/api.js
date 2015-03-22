@@ -5,6 +5,8 @@ var models  = require('./models');
 var acl     = require('./acl');
 var msg     = require('./messages');
 
+var scope = models.scope;
+
 function sanitize(data, keys) {
   var sanitizedData = {};
   keys.forEach( function(key) {
@@ -19,19 +21,10 @@ var authorInclude = [
   { model: models.Author, as: 'author', attributes: ['name'] }
 ];
 
-var modelAttributes = [
-  'id',
-  'title',
-  'text',
-  'slug',
-  'createdAt',
-  'updatedAt'
-];
-
-function filteredInstanceWithAuthor(instance) {
+function filteredInstanceWithAuthor(instance, mdlName) {
   var cleaned = {};
 
-  modelAttributes.forEach(function(key) {
+  scope.fullAttributes[mdlName].forEach(function(key) {
     cleaned[key] = instance[key];
   });
 
@@ -39,12 +32,13 @@ function filteredInstanceWithAuthor(instance) {
 }
 
 function createModel(Model, allowedKeys) {
+  var mdlName = Model.name.toLowerCase();
   return function(user, values){
 
     return new Promise( function(res, rej) {
       models.sync().then( function() {
         acl.connect().then( function($acl) {
-          $acl.isAllowed( user.id, Model.name.toLowerCase(), 'create' )
+          $acl.isAllowed( user.id, mdlName, 'create' )
             .then( function(access) {
               if (access) {
 
@@ -53,7 +47,7 @@ function createModel(Model, allowedKeys) {
 
                 Model.create( values )
                   .then(function(instance) {
-                    res(filteredInstanceWithAuthor(instance));
+                    res(filteredInstanceWithAuthor(instance, mdlName));
                   })
                   .catch( function(e){ rej( msg.cleanedError(e) ); })
                 ;
@@ -68,26 +62,27 @@ function createModel(Model, allowedKeys) {
 }
 
 function readModel(Model) {
+  var mdlName = Model.name.toLowerCase();
   return function(user, modelId) {
     
     return new Promise( function(res, rej) {
       models.sync().then( function() {
         acl.connect().then( function($acl) {
-          $acl.isAllowed( user.id,  Model.name.toLowerCase(), 'read' )
+          $acl.isAllowed( user.id,  mdlName, 'read' )
             .then( function(access) {
               if (access) {
                 if (modelId) {
                   Model.find({
                         where: { slug: modelId }, 
                         include: authorInclude,
-                        attributes: modelAttributes 
+                        attributes: scope.fullAttributes[ mdlName ]
                       })
                     .then( res )
                     .catch( function(e){ rej( msg.cleanedError(e) ); })
                   ;
                 } else {
                   Model.findAll({ include: authorInclude,
-                                  attributes: modelAttributes })
+                                  attributes: scope.teaserAttributes[mdlName]})
                     .then( res )
                     .catch( function(e){ rej( msg.cleanedError(e) ); })
                   ;
@@ -103,43 +98,38 @@ function readModel(Model) {
 }
 
 function updateModel(Model, allowedKeys) {
+  var mdlName = Model.name.toLowerCase();
   return function(user, modelId, values){
 
     return new Promise( function(res, rej) {
       models.sync().then( function() {
         acl.connect().then( function($acl) {
-          $acl.isAllowed( user.id, Model.name.toLowerCase(), 'update' )
+          $acl.isAllowed( user.id, mdlName, 'update' )
             .then( function(access) {
               if (access) {
                 if (modelId) {
-                  console.log(1)
                   Model.find({ 
                         where: { slug: modelId },
                         include: authorInclude,
-                        attributes: modelAttributes 
+                        attributes: scope.fullAttributes[ mdlName ]
                       })
                     .then( function(instance) {
-                      console.log(2)
                       if (instance) {
-                        console.log(3)
                         values = sanitize(values, allowedKeys);
                         instance.updateAttributes(values)
                           .then( res )
                           .catch( function(e){ rej( msg.cleanedError(e) ); })
                         ;
                       } else {
-                        console.log(4)
                         res( null );
                       }
                     })
                     .catch( function(e){ rej( msg.cleanedError(e) ); })
                   ;
                 } else {
-                  console.log(5)
                   res( null );
                 }
               } else {
-                console.log(6)
                 rej( msg.error('Unauthorized Access') );
               }
           });
@@ -150,11 +140,12 @@ function updateModel(Model, allowedKeys) {
 }
 
 function deleteModel(Model) {
+  var mdlName = Model.name.toLowerCase();
   return function(user, modelId) {
     return new Promise( function(res, rej) {
       models.sync().then( function() {
         acl.connect().then( function($acl) {
-          $acl.isAllowed( user.id,  Model.name.toLowerCase(), 'delete' )
+          $acl.isAllowed( user.id,  mdlName, 'delete' )
             .then( function(access) {
               if (access) {
                 if (modelId) {
